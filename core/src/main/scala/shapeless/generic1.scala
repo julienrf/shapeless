@@ -16,14 +16,8 @@
 
 package shapeless
 
-import scala.language.existentials
 import scala.language.experimental.macros
-
-import scala.annotation.{ StaticAnnotation, tailrec }
-import scala.reflect.api.Universe
-import scala.reflect.macros.{ blackbox, whitebox }
-
-import ops.{ hlist, coproduct }
+import scala.reflect.macros.whitebox
 
 trait Generic1[F[_], FR[_[_]]] extends Serializable {
   type R[t]
@@ -152,12 +146,10 @@ trait Split10 {
     macro Split1Macros.mkSplit1Impl[L, FO, ({ type λ[t[_]] = FI[U, t] })#λ]
 }
 
-@macrocompat.bundle
+
 class Generic1Macros(val c: whitebox.Context) extends CaseClassMacros {
   import c.ImplicitCandidate
   import c.universe._
-  import internal.constantType
-  import Flag._
 
   def mkGeneric1Impl[T[_], FR[_[_]]](implicit tTag: WeakTypeTag[T[_]], frTag: WeakTypeTag[FR[Any]]): Tree = {
     val tpe = tTag.tpe
@@ -165,7 +157,7 @@ class Generic1Macros(val c: whitebox.Context) extends CaseClassMacros {
     val frTpe =
       c.openImplicits.headOption match {
         case Some(ImplicitCandidate(_, _, TypeRef(_, _, List(_, tpe)), _)) => tpe
-        case other => frTag.tpe.typeConstructor
+        case _ => frTag.tpe.typeConstructor
       }
 
     if(isReprType1(tpe))
@@ -184,11 +176,11 @@ class Generic1Macros(val c: whitebox.Context) extends CaseClassMacros {
     val (rp, rts) = ctorDtor.reprBinding
     val from = cq""" $rp => ${ctorDtor.construct(rts)} """
 
-    val nme = TypeName(c.freshName)
+    val nme = TypeName(c.freshName())
     val reprTpt = reprTypTree1(tpe, nme)
-    val rnme = TypeName(c.freshName)
+    val rnme = TypeName(c.freshName())
 
-    val clsName = TypeName(c.freshName("anon$"))
+    val clsName = c.freshName(TypeName("anon$"))
     q"""
       type Apply0[F[_], T] = F[T]
       type Apply1[F[_[_]], T[_]] = F[T]
@@ -208,7 +200,7 @@ class Generic1Macros(val c: whitebox.Context) extends CaseClassMacros {
 
   def mkCoproductGeneric1(tpe: Type, frTpe: Type): Tree = {
     def mkCoproductCases(tpe: Type, index: Int): CaseDef = {
-      val name = TermName(c.freshName("pat"))
+      val name = c.freshName(TermName("pat"))
 
       val tc = tpe.typeConstructor
       val params = tc.typeParams.map { _ => Bind(typeNames.WILDCARD, EmptyTree) }
@@ -217,16 +209,16 @@ class Generic1Macros(val c: whitebox.Context) extends CaseClassMacros {
       cq"$name: $tpeTpt => $index"
     }
 
-    val nme = TypeName(c.freshName)
+    val nme = TypeName(c.freshName())
     val reprTpt = reprTypTree1(tpe, nme)
-    val rnme = TypeName(c.freshName)
+    val rnme = TypeName(c.freshName())
 
     val to = {
-      val toCases = ctorsOf1(tpe) zip (Stream from 0) map (mkCoproductCases _).tupled
+      val toCases = ctorsOf1(tpe).zipWithIndex.map((mkCoproductCases _).tupled)
       q"""_root_.shapeless.Coproduct.unsafeMkCoproduct((ft: Any) match { case ..$toCases }, ft).asInstanceOf[R[$nme]]"""
     }
 
-    val clsName = TypeName(c.freshName("anon$"))
+    val clsName = c.freshName(TypeName("anon$"))
     q"""
       type Apply0[F[_], T] = F[T]
       type Apply1[F[_[_]], T[_]] = F[T]
@@ -245,7 +237,7 @@ class Generic1Macros(val c: whitebox.Context) extends CaseClassMacros {
   }
 }
 
-@macrocompat.bundle
+
 class IsHCons1Macros(val c: whitebox.Context) extends IsCons1Macros {
   import c.universe._
 
@@ -267,7 +259,7 @@ class IsHCons1Macros(val c: whitebox.Context) extends IsCons1Macros {
     )
 }
 
-@macrocompat.bundle
+
 class IsCCons1Macros(val c: whitebox.Context) extends IsCons1Macros {
   import c.universe._
 
@@ -295,7 +287,7 @@ class IsCCons1Macros(val c: whitebox.Context) extends IsCons1Macros {
     )
 }
 
-@macrocompat.bundle
+
 trait IsCons1Macros extends CaseClassMacros {
   import c.ImplicitCandidate
   import c.universe._
@@ -313,7 +305,7 @@ trait IsCons1Macros extends CaseClassMacros {
     val (fhTpe, ftTpe) =
       c.openImplicits.headOption match {
         case Some(ImplicitCandidate(_, _, TypeRef(_, _, List(_, fh, ft)), _)) => (fh, ft)
-        case other => (fhTpe0, ftTpe0)
+        case _ => (fhTpe0, ftTpe0)
       }
 
     if(!(lDealiasedTpe.typeConstructor =:= consTpe))
@@ -325,7 +317,7 @@ trait IsCons1Macros extends CaseClassMacros {
     val hdPoly = c.internal.polyType(List(lParam), hd)
     val tlPoly = c.internal.polyType(List(lParam), tl)
 
-    val nme = TypeName(c.freshName)
+    val nme = TypeName(c.freshName())
     val lTpt = appliedTypTree1(lPoly, lParamTpe, nme)
     val hdTpt = appliedTypTree1(hdPoly, lParamTpe, nme)
     val tlTpt = appliedTypTree1(tlPoly, lParamTpe, nme)
@@ -350,7 +342,7 @@ trait IsCons1Macros extends CaseClassMacros {
   }
 }
 
-@macrocompat.bundle
+
 class Split1Macros(val c: whitebox.Context) extends CaseClassMacros {
   import c.ImplicitCandidate
   import c.universe._
@@ -362,7 +354,7 @@ class Split1Macros(val c: whitebox.Context) extends CaseClassMacros {
     val (foTpe, fiTpe) =
       c.openImplicits.headOption match {
         case Some(ImplicitCandidate(_, _, TypeRef(_, _, List(_, fo, fi)), _)) => (fo, fi)
-        case other => (foTag.tpe.typeConstructor, fiTag.tpe.typeConstructor)
+        case _ => (foTag.tpe.typeConstructor, fiTag.tpe.typeConstructor)
       }
 
     if(isReprType1(lTpe))
@@ -372,19 +364,18 @@ class Split1Macros(val c: whitebox.Context) extends CaseClassMacros {
     val lParamTpe = lParam.asType.toType
     val lDealiasedTpe = appliedType(lTpe, lParamTpe).dealias
 
-    val nme = TypeName(c.freshName)
+    val nme = TypeName(c.freshName())
 
     def balanced(args: List[Type]): Boolean =
-      args.find(_.contains(lParam)).map { pivot =>
-        !(pivot =:= lParamTpe) &&
-        args.forall { arg =>
+      args.find(_.contains(lParam)).exists { pivot =>
+        !(pivot =:= lParamTpe) && args.forall { arg =>
           arg =:= pivot || !arg.contains(lParam)
         }
-      }.getOrElse(false)
+      }
 
     val (oTpt, iTpt) =
       lDealiasedTpe match {
-        case tpe @ TypeRef(pre, sym, args) if balanced(args) =>
+        case tpe @ TypeRef(_, _, args) if balanced(args) =>
           val Some(pivot) = args.find(_.contains(lParam))
           val oPoly = c.internal.polyType(List(lParam), appliedType(tpe.typeConstructor, args.map { arg => if(arg =:= pivot) lParamTpe else arg }))
           val oTpt = appliedTypTree1(oPoly, lParamTpe, nme)

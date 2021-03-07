@@ -61,7 +61,7 @@ object LowPriority {
 
 }
 
-@macrocompat.bundle
+
 class LowPriorityMacros(val c: whitebox.Context) extends OpenImplicitMacros with LowPriorityTypes {
   import c.universe._
 
@@ -98,7 +98,7 @@ class LowPriorityMacros(val c: whitebox.Context) extends OpenImplicitMacros with
 }
 
 
-@macrocompat.bundle
+
 trait LowPriorityTypes {
   val c: whitebox.Context
 

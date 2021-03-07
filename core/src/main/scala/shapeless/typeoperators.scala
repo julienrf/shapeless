@@ -111,7 +111,7 @@ object the extends Dynamic {
   def selectDynamic(tpeSelector: String): Any = macro TheMacros.implicitlyImpl
 }
 
-@macrocompat.bundle
+
 class TheMacros(val c: whitebox.Context) {
   import c.universe.{ Try => _, _ }
   import internal._, decorators._
@@ -121,7 +121,7 @@ class TheMacros(val c: whitebox.Context) {
   def implicitlyImpl(tpeSelector: Tree): Tree = {
 
     val q"${tpeString: String}" = tpeSelector
-    val dummyNme = c.freshName
+    val dummyNme = c.freshName()
 
     val tpe =
       (for {
@@ -154,7 +154,7 @@ object TypeOf extends Dynamic {
 
   def selectDynamic(code: String): Any = macro Macros.selectDynamic
 
-  @macrocompat.bundle
+
   private[TypeOf] final class Macros(val c: whitebox.Context) {
     import c.universe.{Try => _, _}
     import internal._, decorators._

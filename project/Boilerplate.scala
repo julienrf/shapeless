@@ -55,9 +55,9 @@ object Boilerplate {
   )
 
   /** Returns a seq of the generated files.  As a side-effect, it actually generates them... */
-  def gen(dir : File) = for(t <- templates) yield {
+  def gen(dir: File, scalaBinaryVersion: String): Seq[File] = for (t <- templates) yield {
     val tgtFile = dir / "shapeless" / t.filename
-    IO.write(tgtFile, t.body)
+    IO.write(tgtFile, t.body(scalaBinaryVersion == "2.13"))
     tgtFile
   }  
 
@@ -100,15 +100,15 @@ object Boilerplate {
 
   trait Template {
     def filename: String
-    def content(tv: TemplateVals): String
-    def range = 1 to 22
-    def body: String = {
-      val headerLines = header split '\n'
-      val rawContents = range map { n => content(new TemplateVals(n)) split '\n' filterNot (_.isEmpty) }
-      val preBody = rawContents.head takeWhile (_ startsWith "|") map (_.tail)
-      val instances = rawContents flatMap {_ filter (_ startsWith "-") map (_.tail) }
-      val postBody = rawContents.head dropWhile (_ startsWith "|") dropWhile (_ startsWith "-") map (_.tail)
-      (headerLines ++ preBody ++ instances ++ postBody) mkString "\n"
+    def content(tv: TemplateVals, isScala213: Boolean): String
+    def range: Range = 1 to 22
+    def body(isScala213: Boolean): String = {
+      val headerLines = header.split('\n')
+      val rawContents = range.map(n => content(new TemplateVals(n), isScala213).split('\n').filterNot(_.isEmpty))
+      val preBody = rawContents.head.takeWhile(_.startsWith("|")).map(_.tail)
+      val instances = rawContents.flatMap(_.filter(_.startsWith("-")).map(_.tail))
+      val postBody = rawContents.head.dropWhile(_.startsWith("|")).dropWhile(_.startsWith("-")).map(_.tail)
+      Vector.concat(headerLines, preBody, instances, postBody).mkString("\n")
     }
   }
 
@@ -130,7 +130,7 @@ object Boilerplate {
   
   object GenTuplerInstances extends Template {
     val filename = "tupler.scala"
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       block"""
         |package ops
@@ -160,7 +160,7 @@ object Boilerplate {
 
     override val range = 0 to 22
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       val fnType = s"(${`A..N`}) => Res"
       val hlistFnType = s"(${`A::N`}) => Res"
@@ -196,7 +196,7 @@ object Boilerplate {
 
     override val range = 0 to 22
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       val fnType = s"(${`A..N`}) => Res"
       val hlistFnType = s"(${`A::N`}) => Res"
@@ -231,7 +231,7 @@ object Boilerplate {
   object GenCaseInst extends Template {
     val filename = "caseinst.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       block"""
         |
@@ -253,7 +253,7 @@ object Boilerplate {
   object GenPolyApply extends Template {
     val filename = "polyapply.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       block"""
         |
@@ -276,7 +276,7 @@ object Boilerplate {
   object GenPolyInst extends Template {
     val filename = "polyinst.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       block"""
         |
@@ -297,7 +297,7 @@ object Boilerplate {
   object GenCases extends Template {
     val filename = "cases.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       block"""
         |
@@ -334,14 +334,14 @@ object Boilerplate {
   object GenPolyNTraits extends Template {
     val filename = "polyntraits.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       val fnBody = if (arity == 0) "fn()" else s"l match { case ${`a::n`} => fn(${`a..n`}) }" 
 
       block"""
         |
         -
-        -trait Poly${arity} extends Poly { outer =>
+        -trait Poly$arity extends Poly { outer =>
         -  type Case[${`A..N`}]
         -    = poly.Case[this.type, ${`A::N`}]
         -
@@ -355,7 +355,7 @@ object Boilerplate {
         -      (fn: (${`A..N`}) => Res) = new Case[${`A..N`}] {
         -      type Result = Res
         -      val value = (l: ${`A::N`})
-        -        => ${fnBody}
+        -        => $fnBody
         -    }
         -  }
         -  
@@ -363,7 +363,7 @@ object Boilerplate {
         -    = new CaseBuilder[${`A..N`}]
         -}
         -
-        -object Poly${arity} extends PolyNBuilders.Poly${arity}Builder[HNil] {
+        -object Poly$arity extends PolyNBuilders.Poly${arity}Builder[HNil] {
         - val functions = HNil
         -}
         |
@@ -374,7 +374,7 @@ object Boilerplate {
   object GenPolyNBuilders extends Template {
     val filename = "polynbuilders.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
 
       block"""
@@ -435,14 +435,14 @@ object Boilerplate {
   object GenNats extends Template {
     val filename = "nats.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       val n = tv.arity
       block"""
         |
         |trait Nats {
         -
-        -  type _${n} = Succ[_${n-1}]
-        -  val _${n}: _${n} = new _${n}
+        -  type _$n = Succ[_${n-1}]
+        -  val _$n: _$n = new _$n
         |}
       """
     }
@@ -451,11 +451,11 @@ object Boilerplate {
   object GenTupleTypeableInstances extends Template {
     val filename = "tupletypeables.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
-      val implicitArgs = (synTypes map(a => s"cast${a}:Typeable[${a}]")) mkString ", "
-      val enumerators = synTypes.zipWithIndex map { case (a,idx) => s"_ <- p._${idx+1}.cast[${a}]" } mkString "; "
-      val castVals = (synTypes map(a => s"$${cast${a}.describe}")) mkString ", "
+      val implicitArgs = (synTypes map(a => s"cast$a:Typeable[$a]")) mkString ", "
+      val enumerators = synTypes.zipWithIndex map { case (a,idx) => s"_ <- p._${idx+1}.cast[$a]" } mkString "; "
+      val castVals = (synTypes map(a => s"$${cast$a.describe}")) mkString ", "
 
       block"""
         |
@@ -464,13 +464,13 @@ object Boilerplate {
         |
         -  implicit def tuple${arity}Typeable
         -    [${`A..N`}]
-        -    (implicit ${implicitArgs})
+        -    (implicit $implicitArgs)
         -  = new Typeable[${`(A..N)`}] {
         -    def cast(t : Any) : Option[${`(A..N)`}] = {
         -      if(t == null) None
         -      else if(t.isInstanceOf[${`(_.._)`}]) {
         -        val p = t.asInstanceOf[${`(_.._)`}]
-        -        for(${enumerators})
+        -        for($enumerators)
         -        yield t.asInstanceOf[${`(A..N)`}]
         -      } else None
         -    }
@@ -485,20 +485,23 @@ object Boilerplate {
   object GenSizedBuilder extends Template {
     val filename = "sizedbuilder.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       val `a:T..n:T` = synVals map (_ + ":T") mkString ", "
+      val importFactory = if (isScala213) "scala.collection.Factory" else "scala.collection.generic.CanBuildFrom"
+      val factoryType = if (isScala213) "Factory[T, CC[T]]" else "CanBuildFrom[Nothing, T, CC[T]]"
+      val newBuilder = if (isScala213) "cbf.newBuilder" else "cbf()"
 
       block"""
         |
         |class SizedBuilder[CC[_]] {
-        |  import scala.collection.generic.CanBuildFrom
+        |  import $importFactory
         |  import nat._
         |  import Sized.wrap
         |
         -  def apply[T](${`a:T..n:T`})
-        -    (implicit cbf : CanBuildFrom[Nothing, T, CC[T]], ev : AdditiveCollection[CC[T]]) =
-        -    wrap[CC[T], _${arity}]((cbf() += (${`a..n`})).result)
+        -    (implicit cbf: $factoryType, ev: AdditiveCollection[CC[T]]) =
+        -    wrap[CC[T], _$arity](($newBuilder.+=(${`a..n`})).result())
         -
         |}
       """
@@ -508,11 +511,11 @@ object Boilerplate {
   object GenHMapBuilder extends Template {
     val filename = "hmapbuilder.scala"
 
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
-      val typeArgs  = (0 until arity) map (n => s"K${n}, V${n}") mkString ", "
-      val args      = (0 until arity) map (n => s"e${n}: (K${n}, V${n})") mkString ", "
-      val witnesses = (0 until arity) map (n => s"ev${n}: R[K${n}, V${n}]") mkString ", "
+      val typeArgs  = (0 until arity) map (n => s"K$n, V$n") mkString ", "
+      val args      = (0 until arity) map (n => s"e$n: (K$n, V$n)") mkString ", "
+      val witnesses = (0 until arity) map (n => s"ev$n: R[K$n, V$n]") mkString ", "
       val mapArgs   = (0 until arity) map (n => "e"+n) mkString ", "
 
       block"""
@@ -520,10 +523,10 @@ object Boilerplate {
         |class HMapBuilder[R[_, _]] {
         -
         -  def apply
-        -    [${typeArgs}]
-        -    (${args})
-        -    (implicit ${witnesses})
-        -    = new HMap[R](Map(${mapArgs}))
+        -    [$typeArgs]
+        -    ($args)
+        -    (implicit $witnesses)
+        -    = new HMap[R](Map($mapArgs))
         |}
       """
     }
@@ -531,11 +534,11 @@ object Boilerplate {
  
   object GenUnpackInstances extends Template {
     val filename = "unpack.scala"
-    def content(tv: TemplateVals) = {
+    def content(tv: TemplateVals, isScala213: Boolean) = {
       import tv._
       val typeblock = "FF[" + `A..N` + "], FF, " + `A..N`
       val hktypeblock = "FF[" + `_.._` + "], " + `A..N`
-      val traitname = s"Unpack${arity}"
+      val traitname = s"Unpack$arity"
       block"""
         |
         -

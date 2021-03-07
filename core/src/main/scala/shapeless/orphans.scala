@@ -36,7 +36,7 @@ trait OrphanDeriver[F[_], D] {
   implicit def materialize[T]: F[T] = macro OrphanMacros.materializeImpl[F, D, T]
 }
 
-@macrocompat.bundle
+
 class OrphanMacros(val c: whitebox.Context) extends CaseClassMacros {
   import c.universe._
 
@@ -76,8 +76,7 @@ class OrphanMacros(val c: whitebox.Context) extends CaseClassMacros {
     val deriver =
       dTpe match {
         case SingleType(pre, sym) => mkAttributedRef(pre, sym)
-        case other =>
-          c.abort(c.enclosingPosition, "Deriver $dTpe not found")
+        case other => c.abort(c.enclosingPosition, s"Deriver $other not found")
       }
 
     val inst = c.inferImplicitValue(appTpe, silent = true)

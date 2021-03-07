@@ -16,10 +16,9 @@
 
 package shapeless
 
-import scala.language.experimental.macros
-
 import scala.annotation.implicitNotFound
 import scala.collection.immutable.ListMap
+import scala.language.experimental.macros
 import scala.reflect.macros.whitebox
 
 /**
@@ -168,7 +167,7 @@ object Strict {
   implicit def mkStrict[I]: Strict[I] = macro LazyMacrosRef.mkStrictImpl[I]
 }
 
-@macrocompat.bundle
+
 trait OpenImplicitMacros {
   val c: whitebox.Context
 
@@ -187,16 +186,16 @@ trait OpenImplicitMacros {
 
   def secondOpenImplicitTpe: Option[Type] =
     c.openImplicits match {
-      case (List(_, second, _ @ _*)) =>
+      case List(_, second, _ @ _*) =>
         Some(second.pt)
       case _ => None
     }
 }
 
-@macrocompat.bundle
+
 class LazyMacros(val c: whitebox.Context) extends CaseClassMacros with OpenImplicitMacros with LowPriorityTypes {
-  import c.universe._
   import c.internal._
+  import c.universe._
   import decorators._
 
   def mkLazyImpl[I](implicit iTag: WeakTypeTag[I]): Tree =
@@ -234,7 +233,6 @@ class LazyMacros(val c: whitebox.Context) extends CaseClassMacros with OpenImpli
 
     class SubstMessage extends Transformer {
       val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
-      import global.nme
 
       override def transform(tree: Tree): Tree = {
         super.transform {
@@ -304,13 +302,13 @@ class LazyMacros(val c: whitebox.Context) extends CaseClassMacros with OpenImpli
             val tree = c.inferImplicitValue(tpe, silent = true)
             if(tree.isEmpty) {
               tpe.typeSymbol.annotations.
-                find(_.tree.tpe =:= typeOf[_root_.scala.annotation.implicitNotFound]).foreach { infAnn =>
+                find(_.tree.tpe =:= typeOf[_root_.scala.annotation.implicitNotFound]).foreach { _ =>
                   val global = c.universe.asInstanceOf[scala.tools.nsc.Global]
                   val analyzer: global.analyzer.type = global.analyzer
                   val gTpe = tpe.asInstanceOf[global.Type]
                   val errorMsg = gTpe.typeSymbolDirect match {
                     case analyzer.ImplicitNotFoundMsg(msg) =>
-                      msg.format(TermName("evidence").asInstanceOf[global.TermName], gTpe)
+                      msg.formatDefSiteMessage(gTpe)
                     case _ =>
                       s"Implicit value of type $tpe not found"
                   }
@@ -339,7 +337,7 @@ class LazyMacros(val c: whitebox.Context) extends CaseClassMacros with OpenImpli
             val (tree, actualType) = if (root) mkInstances(state)(instTpe0) else (inst.ident, inst.actualTpe)
             current = if (root) None else Some(state)
             if (root) {
-              val valNme = TermName(c.freshName("inst"))
+              val valNme = c.freshName(TermName("inst"))
               q"""
               val $valNme: $actualType = $tree
               ${mkInst(q"$valNme", actualType)}
@@ -360,7 +358,6 @@ class LazyMacros(val c: whitebox.Context) extends CaseClassMacros with OpenImpli
       prevent: List[TypeWrapper]
     ) {
       def addDependency(tpe: Type): State = {
-        import scala.::
         val open0 = open match {
           case Nil => Nil
           case h :: t => h.copy(dependsOn = if (h.instTpe =:= tpe || h.dependsOn.exists(_ =:= tpe)) h.dependsOn else tpe :: h.dependsOn) :: t
@@ -394,7 +391,6 @@ class LazyMacros(val c: whitebox.Context) extends CaseClassMacros with OpenImpli
 
 
       def dependsOn(tpe: Type): List[Instance] = {
-        import scala.::
         def helper(tpes: List[List[Type]], acc: List[Instance]): List[Instance] =
           tpes match {
             case Nil => acc

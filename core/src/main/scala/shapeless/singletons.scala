@@ -16,13 +16,11 @@
 
 package shapeless
 
-import scala.language.dynamics
-import scala.language.existentials
+import shapeless.tag.@@
+
 import scala.language.experimental.macros
-
-import scala.reflect.macros.{ blackbox, whitebox }
-
-import tag.@@
+import scala.language.dynamics
+import scala.reflect.macros.whitebox
 import scala.util.Try
 
 /** Provides the value corresponding to a singleton type.
@@ -131,9 +129,9 @@ object Widen {
   implicit def materialize[T, Out]: Aux[T, Out] = macro SingletonTypeMacros.materializeWiden[T, Out]
 }
 
-@macrocompat.bundle
+
 trait SingletonTypeUtils extends ReprTypes {
-  import c.universe.{ Try => _, _ }
+  import c.universe.{Try => _, _}
   import internal.decorators._
 
   def singletonOpsTpe = typeOf[syntax.SingletonOps]
@@ -235,7 +233,7 @@ trait SingletonTypeUtils extends ReprTypes {
   }
 }
 
-@macrocompat.bundle
+
 class SingletonTypeMacros(val c: whitebox.Context) extends SingletonTypeUtils with NatMacroDefns {
   import c.universe._
   import internal.decorators._

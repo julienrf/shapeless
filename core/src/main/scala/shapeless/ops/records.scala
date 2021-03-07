@@ -18,9 +18,7 @@ package shapeless
 package ops
 
 import scala.language.experimental.macros
-import scala.reflect.macros.{ blackbox, whitebox }
-
-import poly._
+import scala.reflect.macros.whitebox
 
 //object record {
 //  Ideally this would be an object rather than a package, however that appears
@@ -53,7 +51,7 @@ package record {
     def apply(l: HList): Any = HList.unsafeGet(l, i)
   }
 
-  @macrocompat.bundle
+
   class SelectorMacros(val c: whitebox.Context) extends CaseClassMacros {
     import c.universe._
 
@@ -125,7 +123,7 @@ package record {
     def apply(l: HList, f: Any): HList = HList.unsafeUpdateAppend(l, i, f)
   }
 
-  @macrocompat.bundle
+
   class UpdaterMacros(val c: whitebox.Context) extends CaseClassMacros {
     import c.universe._
 
@@ -385,7 +383,7 @@ package record {
     def apply(l: HList, f: Any => Any): HList = HList.unsafeUpdateWith(l, i, f)
   }
 
-  @macrocompat.bundle
+
   class ModifierMacros(val c: whitebox.Context) extends CaseClassMacros {
     import c.universe._
 
@@ -453,7 +451,7 @@ package record {
     def apply(l: HList): (Any, HList) = HList.unsafeRemove(l, i)
   }
 
-  @macrocompat.bundle
+
   class RemoverMacros(val c: whitebox.Context) extends CaseClassMacros {
     import c.universe._
 
@@ -598,7 +596,7 @@ package record {
     implicit def apply[L <: HList, K]: LacksKey[L, K] = macro LacksKeyMacros.applyImpl[L, K]
   }
 
-  @macrocompat.bundle
+
   class LacksKeyMacros(val c: whitebox.Context) extends CaseClassMacros {
     import c.universe._
 
@@ -833,7 +831,7 @@ package record {
       }
 
     implicit def hconsMapValues[HF, K, V, T <: HList](implicit
-      hc: Case1[HF, V],
+      hc: poly.Case1[HF, V],
       mapValuesTail: MapValues[HF, T]
     ): Aux[HF, FieldType[K, V] :: T, FieldType[K, hc.Result] :: mapValuesTail.Out] =
       new MapValues[HF, FieldType[K, V] :: T] {

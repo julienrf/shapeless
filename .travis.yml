@@ -1,30 +1,32 @@
+os: linux
+dist: trusty
 language: scala
-install:
-  - pip install --user codecov
-
-scala:
-- 2.10.7
-- 2.11.12
-- 2.12.4
-- 2.13.0-M2
 
 jdk:
-- oraclejdk8
+  - oraclejdk8
+
+scala:
+  - 2.11.12
+  - 2.12.12
+  - 2.13.3
+
+env:
+  - {}
+  - SCALA_JS_VERSION=0.6.33
+  - SCALA_JS_VERSION=1.5.0
+
+stages:
+  - name: test
+  - name: release
+    if: ((branch = master AND type = push) OR (tag IS present)) AND NOT fork
 
 cache:
   directories:
+    - $HOME/.cache/coursier
     - $HOME/.ivy2/cache
     - $HOME/.sbt
 
-script:
-  - travis_wait 60 scripts/travis-publish.sh
-
-env:
-  global:
-  - secure: eXcMQIb0hHeaJsJGaJYhLS8aONu5YnhK1NOHJZGTBIb6ukSd48uXm6xNgBMozgkOEUBXyrBU9ZnCOxSS+HmJZDbK0Wkr90C4sZH7dHBZYMN3hNfCp5SjPFY2+TgrYZ24G8s/BPei6725AlbXM0vmdXPsvxaOvT36d2Ej7xto8+c=
-  - secure: c3IO3G34aTFD+fh/5vqc3sCgwMaClPDziYQDCEUqQBOQFdTS7wbBZFVpqTUUlkMLkeyHZ0BGSLUiDZnu8TGGITtgJBaCUchhLYK5WOavyzCl/NPVOBebviazgtBOzPDKyYDcahjmxCGrMspTiRei86VgCdkNIvldJJm7zK1OAOU=
-
-sudo: false
+script: sbt ++$TRAVIS_SCALA_VERSION! clean validateCI
 
 notifications:
   irc: "chat.freenode.net#shapeless"
@@ -32,11 +34,17 @@ notifications:
     urls:
       - https://webhooks.gitter.im/e/e58e987de2f64f32c8c6
 
-matrix:
+jobs:
   include:
-  - scala: 2.11.11
-    env: NATIVE=true
-    jdk: oraclejdk8
-    sudo: required
-    before_install:
-    - curl https://raw.githubusercontent.com/scala-native/scala-native/v0.3.1/bin/travis_setup.sh | travis_wait 15 bash -x
+    - stage: test
+      env:
+        - SCALA_NATIVE=true
+      before_install:
+        - curl https://raw.githubusercontent.com/scala-native/scala-native/master/scripts/travis_setup.sh | bash -x
+    - stage: release
+      before_install:
+        - git fetch --tags
+        - curl https://raw.githubusercontent.com/scala-native/scala-native/master/scripts/travis_setup.sh | bash -x
+      script:
+        - sbt ci-release
+        - SCALA_JS_VERSION=0.6.33 sbt clean sonatypeBundleClean ci-release

@@ -17,7 +17,6 @@
 package shapeless
 
 import scala.language.experimental.macros
-
 import scala.reflect.macros.whitebox
 
 object labelled {
@@ -84,9 +83,8 @@ trait FieldOf[V] {
   def ->>(v: V): FieldType[this.type, V] = field[this.type](v)
 }
 
-@macrocompat.bundle
+
 class LabelledMacros(val c: whitebox.Context) extends SingletonTypeUtils with CaseClassMacros {
-  import labelled._
   import c.universe._
 
   def mkDefaultSymbolicLabellingImpl[T](implicit tTag: WeakTypeTag[T]): Tree = {

@@ -16,8 +16,7 @@
 
 package shapeless
 
-import labelled.{ field, FieldType }
-import ops.record.{ Keys, Values }
+import shapeless.labelled.{FieldType, field}
 
 /**
  * A type class abstracting over the `product` operation of type classes over

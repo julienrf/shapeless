@@ -142,7 +142,7 @@ class SizedOps[A0, Repr : AdditiveCollection, L <: Nat](s : Sized[Repr, L], itl:
     val builder = cbf.apply(s.unsized)
     builder += elem
     builder ++= s.unsized.toIterator
-    wrap[Repr, Succ[L]](builder.result)
+    wrap[Repr, Succ[L]](builder.result())
   }
   
   /**
@@ -153,7 +153,7 @@ class SizedOps[A0, Repr : AdditiveCollection, L <: Nat](s : Sized[Repr, L], itl:
     val builder = cbf.apply(s.unsized)
     builder ++= s.unsized.toIterator
     builder += elem
-    wrap[Repr, Succ[L]](builder.result)
+    wrap[Repr, Succ[L]](builder.result())
   }
   
   /**

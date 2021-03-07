@@ -16,7 +16,6 @@
 
 package shapeless
 
-import language.existentials
 import language.experimental.macros
 
 import reflect.macros.whitebox
@@ -260,7 +259,7 @@ trait Poly0 extends Poly {
   }
 }
 
-@macrocompat.bundle
+
 class PolyMacros(val c: whitebox.Context) {
   import c.universe._
 

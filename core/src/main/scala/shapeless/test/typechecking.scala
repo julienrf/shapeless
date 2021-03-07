@@ -32,7 +32,7 @@ object illTyped {
   def apply(code: String, expected: String): Unit = macro IllTypedMacros.applyImpl
 }
 
-@macrocompat.bundle
+
 class IllTypedMacros(val c: whitebox.Context) {
   import c.universe._
 
@@ -47,14 +47,14 @@ class IllTypedMacros(val c: whitebox.Context) {
     }
 
     try {
-      val dummy0 = TermName(c.freshName)
-      val dummy1 = TermName(c.freshName)
+      val dummy0 = TermName(c.freshName())
+      val dummy1 = TermName(c.freshName())
       c.typecheck(c.parse(s"object $dummy0 { val $dummy1 = { $codeStr } }"))
       c.error(c.enclosingPosition, "Type-checking succeeded unexpectedly.\n"+expMsg)
     } catch {
       case e: TypecheckException =>
         val msg = e.getMessage
-        if((expected ne null) && !(expPat.matcher(msg)).matches)
+        if ((expected ne null) && !expPat.matcher(msg).matches)
           c.error(c.enclosingPosition, "Type-checking failed in an unexpected way.\n"+expMsg+"\nActual error: "+msg)
       case e: ParseException =>
         c.error(c.enclosingPosition, s"Parsing failed.\n${e.getMessage}")

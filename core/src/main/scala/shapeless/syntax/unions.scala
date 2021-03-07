@@ -17,8 +17,9 @@
 package shapeless
 package syntax
 
+import shapeless.tag.@@
+
 import scala.language.dynamics
-import tag.@@
 
 /**
  * Discriminated union operations on `Coproducts`'s with field-like elements.
@@ -26,7 +27,6 @@ import tag.@@
  * @author Miles Sabin
  */
 final class UnionOps[C <: Coproduct](val c : C) extends AnyVal with Serializable {
-  import shapeless.union._
   import ops.union._
 
   /**

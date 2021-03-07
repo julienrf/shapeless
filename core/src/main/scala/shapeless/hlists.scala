@@ -16,10 +16,9 @@
 
 package shapeless
 
+import scala.annotation.tailrec
 import scala.language.dynamics
 import scala.language.experimental.macros
-
-import scala.annotation.tailrec
 import scala.reflect.macros.whitebox
 
 /**
@@ -281,10 +280,9 @@ trait SingletonProductArgs extends Dynamic {
   def applyDynamic(method: String)(args: Any*): Any = macro ProductMacros.forwardSingletonImpl
 }
 
-@macrocompat.bundle
+
 class ProductMacros(val c: whitebox.Context) extends SingletonTypeUtils with NatMacroDefns {
   import c.universe._
-  import internal.constantType
 
   def forwardImpl(method: Tree)(args: Tree*): Tree = forward(method, args, false)
 
@@ -304,7 +302,7 @@ class ProductMacros(val c: whitebox.Context) extends SingletonTypeUtils with Nat
 
     val meth = lhsTpe.member(methodName).asMethod
 
-    if (!meth.paramLists.isEmpty && (meth.paramLists(0) forall (_.isImplicit))) {
+    if (meth.paramLists.nonEmpty && (meth.paramLists.head forall (_.isImplicit))) {
       val typeParamsTree = mkProductNatTypeParamsImpl(args)
       q""" $lhs.$methodName[${typeParamsTree}] """
     } else {

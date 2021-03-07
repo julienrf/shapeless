@@ -70,7 +70,7 @@ object Nat extends Nats {
   implicit def natOps[N <: Nat](n : N) : NatOps[N] = new NatOps(n)
 }
 
-@macrocompat.bundle
+
 class NatMacros(val c: whitebox.Context) extends NatMacroDefns {
   import c.universe._
 
@@ -82,7 +82,7 @@ class NatMacros(val c: whitebox.Context) extends NatMacroDefns {
     }
 }
 
-@macrocompat.bundle
+
 trait NatMacroDefns {
   val c: whitebox.Context
   import c.universe._

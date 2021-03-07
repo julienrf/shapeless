@@ -16,12 +16,11 @@
 
 package shapeless
 
+import shapeless.ops.{coproduct, hlist}
+
+import scala.annotation.{StaticAnnotation, tailrec}
 import scala.language.experimental.macros
-
-import scala.annotation.{ StaticAnnotation, tailrec }
-import scala.reflect.macros.{ blackbox, whitebox }
-
-import ops.{ hlist, coproduct }
+import scala.reflect.macros.{blackbox, whitebox}
 
  /** Represents the ability to convert from a concrete type (e.g. a case class)
   * to a generic ([[HList]] / [[Coproduct]]} based) representation of the type.
@@ -264,10 +263,10 @@ object HasCoproductGeneric {
   implicit def apply[T]: HasCoproductGeneric[T] = macro GenericMacros.mkHasCoproductGeneric[T]
 }
 
-@macrocompat.bundle
+
 trait ReprTypes {
   val c: blackbox.Context
-  import c.universe.{ Symbol => _, _ }
+  import c.universe.{Symbol => _, _}
 
   def hlistTpe = typeOf[HList]
   def hnilTpe = typeOf[HNil]
@@ -282,13 +281,12 @@ trait ReprTypes {
   def symbolTpe = typeOf[Symbol]
 }
 
-@macrocompat.bundle
+
 trait CaseClassMacros extends ReprTypes {
   val c: whitebox.Context
 
   import c.universe._
   import internal.constantType
-  import Flag._
 
   def abort(msg: String) =
     c.abort(c.enclosingPosition, msg)
@@ -707,7 +705,7 @@ trait CaseClassMacros extends ReprTypes {
     import global.analyzer.Context
 
     original.companion.orElse {
-      import global.{ abort => aabort, _ }
+      import global.{abort => aabort, _}
       implicit class PatchedContext(ctx: Context) {
         trait PatchedLookupResult { def suchThat(criterion: Symbol => Boolean): Symbol }
         def patchedLookup(name: Name, expectedOwner: Symbol) = new PatchedLookupResult {
@@ -967,15 +965,15 @@ trait CaseClassMacros extends ReprTypes {
 
         // case 5: concrete, exactly one public constructor with matching public unapply
         case HasCtorUnapply(args) =>
-          val elems = args.map { case (name, tpe) => (TermName(c.freshName("pat")), name, tpe) }
+          val elems = args.map { case (name, tpe) => (c.freshName(TermName("pat")), name, tpe) }
           val pattern = pq"${companionRef(tpe)}(..${elems.map { case (binder, _, tpe) => if(isVararg(tpe)) pq"$binder @ $repWCard" else pq"$binder" }})"
           val rhs = elems.map { case (binder, _, tpe) => narrow(q"$binder", tpe) }
           mkCtorDtor1(elems, pattern, rhs)
 
         // case 6: concrete, exactly one public constructor with matching accessible fields
         case HasUniqueCtor(args) =>
-          val elems = args.map { case (name, tpe) => (TermName(c.freshName("pat")), name, tpe) }
-          val binder = TermName(c.freshName("pat"))
+          val elems = args.map { case (name, tpe) => (c.freshName(TermName("pat")), name, tpe) }
+          val binder = c.freshName(TermName("pat"))
           val pattern = pq"$binder"
           val rhs = elems.map { case (_, name, tpe) => narrow(q"$binder.$name", tpe) }
           mkCtorDtor1(elems, pattern, rhs)
@@ -986,11 +984,9 @@ trait CaseClassMacros extends ReprTypes {
   }
 }
 
-@macrocompat.bundle
+
 class GenericMacros(val c: whitebox.Context) extends CaseClassMacros {
   import c.universe._
-  import internal.constantType
-  import Flag._
 
   def materialize[T: WeakTypeTag, R: WeakTypeTag]: Tree = {
     val tpe = weakTypeOf[T]
@@ -1010,7 +1006,7 @@ class GenericMacros(val c: whitebox.Context) extends CaseClassMacros {
     val (rp, rts) = ctorDtor.reprBinding
     val from = cq""" $rp => ${ctorDtor.construct(rts)} """
 
-    val clsName = TypeName(c.freshName("anon$"))
+    val clsName = c.freshName(TypeName("anon$"))
     q"""
       final class $clsName extends _root_.shapeless.Generic[$tpe] {
         type Repr = ${reprTypTree(tpe)}
@@ -1033,11 +1029,11 @@ class GenericMacros(val c: whitebox.Context) extends CaseClassMacros {
     }
 
     val to = {
-      val toCases = ctorsOf(tpe) zip (Stream from 0) map (mkCoproductCases _).tupled
+      val toCases = ctorsOf(tpe).zipWithIndex.map((mkCoproductCases _).tupled)
       q"""_root_.shapeless.Coproduct.unsafeMkCoproduct((p: @_root_.scala.unchecked) match { case ..$toCases }, p).asInstanceOf[Repr]"""
     }
 
-    val clsName = TypeName(c.freshName("anon$"))
+    val clsName = c.freshName(TypeName("anon$"))
     q"""
       final class $clsName extends _root_.shapeless.Generic[$tpe] {
         type Repr = ${reprTypTree(tpe)}

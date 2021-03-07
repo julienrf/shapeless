@@ -70,7 +70,7 @@ object Data extends Data1 {
         def gmapQ(t: C[T]) =
           t.foldLeft(List.newBuilder[R]) { (b, el) =>
             b += qt.value(el)
-          }.result
+          }.result()
       }
 
   implicit def genMapData[P, M[X, Y], K, V, R]
@@ -79,7 +79,7 @@ object Data extends Data1 {
         def gmapQ(t: M[K, V]) =
           t.foldLeft(List.newBuilder[R]) { case (b, el) =>
             b += qv.value(el)
-          }.result
+          }.result()
       }
 
   implicit def deriveHNil[P, R]: Data[P, HNil, R] =

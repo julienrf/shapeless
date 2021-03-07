@@ -17,7 +17,6 @@
 package shapeless
 
 import scala.language.experimental.macros
-
 import scala.reflect.macros.blackbox
 
 /**
@@ -40,10 +39,11 @@ trait LowPriorityTypeable {
  * `cast[T]` method.
  */
 object Typeable extends TupleTypeableInstances with LowPriorityTypeable {
-  import java.{ lang => jl }
-  import scala.collection.{ GenMap, GenTraversable }
-  import scala.reflect.ClassTag
   import syntax.typeable._
+
+  import java.{lang => jl}
+  import scala.collection.{GenMap, GenTraversable}
+  import scala.reflect.ClassTag
 
   def apply[T](implicit castT: Typeable[T]) = castT
 
@@ -283,9 +283,9 @@ object Typeable extends TupleTypeableInstances with LowPriorityTypeable {
     new Typeable[H :: T] {
       def cast(t: Any): Option[H :: T] = {
         if(t == null) None
-        else if(t.isInstanceOf[::[_, _ <: HList]]) {
+        else if (t.isInstanceOf[::[_, _ <: HList]]) {
           val l = t.asInstanceOf[::[_, _ <: HList]]
-          for(hd <- l.head.cast[H]; tl <- (l.tail: Any).cast[T]) yield t.asInstanceOf[H :: T]
+          for (_ <- l.head.cast[H]; tl <- (l.tail: Any).cast[T]) yield t.asInstanceOf[H :: T]
         } else None
       }
       def describe = s"${castH.describe} :: ${castT.describe}"
@@ -316,9 +316,9 @@ object Typeable extends TupleTypeableInstances with LowPriorityTypeable {
     new Typeable[Inl[H, T]] {
       def cast(t: Any): Option[Inl[H, T]] = {
         if(t == null) None
-        else if(t.isInstanceOf[Inl[_, _ <: Coproduct]]) {
+        else if (t.isInstanceOf[Inl[_, _ <: Coproduct]]) {
           val l = t.asInstanceOf[Inl[_, _ <: Coproduct]]
-          for(hd <- l.head.cast[H]) yield t.asInstanceOf[Inl[H, T]]
+          for (_ <- l.head.cast[H]) yield t.asInstanceOf[Inl[H, T]]
         } else None
       }
       def describe = s"Inl[${castH.describe}}]"
@@ -329,9 +329,9 @@ object Typeable extends TupleTypeableInstances with LowPriorityTypeable {
     new Typeable[Inr[H, T]] {
       def cast(t: Any): Option[Inr[H, T]] = {
         if(t == null) None
-        else if(t.isInstanceOf[Inr[_, _ <: Coproduct]]) {
+        else if (t.isInstanceOf[Inr[_, _ <: Coproduct]]) {
           val r = t.asInstanceOf[Inr[_, _ <: Coproduct]]
-          for(tl <- r.tail.cast[T]) yield t.asInstanceOf[Inr[H, T]]
+          for (_ <- r.tail.cast[T]) yield t.asInstanceOf[Inr[H, T]]
         } else None
       }
       def describe = s"Inr[${castT.describe}}]"
@@ -366,14 +366,13 @@ object TypeCase {
   }
 }
 
-@macrocompat.bundle
+
 class TypeableMacros(val c: blackbox.Context) extends SingletonTypeUtils {
   import c.universe._
-  import internal._
   import definitions.NothingClass
 
-  val typeableTpe = typeOf[Typeable[_]].typeConstructor
-  val genericTpe = typeOf[Generic[_]].typeConstructor
+  val typeableTpe: Type = typeOf[Typeable[_]].typeConstructor
+  val genericTpe: Type = typeOf[Generic[_]].typeConstructor
 
   def dfltTypeableImpl[T: WeakTypeTag]: Tree = {
     val tpe = weakTypeOf[T]
@@ -384,7 +383,7 @@ class TypeableMacros(val c: blackbox.Context) extends SingletonTypeUtils {
       case t: TypeRef if t.sym == NothingClass =>
         c.abort(c.enclosingPosition, "No Typeable for Nothing")
 
-      case ExistentialType(_, underlying) =>
+      case ExistentialType(_, _) =>
         val tArgs = dealiased.typeArgs
         val normalized = appliedType(dealiased.typeConstructor, tArgs)
 
@@ -404,7 +403,7 @@ class TypeableMacros(val c: blackbox.Context) extends SingletonTypeUtils {
         val parentTypeables = parents.filterNot(_ =:= typeOf[AnyRef]).map { parent =>
           c.inferImplicitValue(appliedType(typeableTpe, List(parent)))
         }
-        if(parentTypeables.exists(_ == EmptyTree))
+        if(parentTypeables.contains(EmptyTree))
           c.abort(c.enclosingPosition, "Missing Typeable for parent of a refinement")
 
         q"""

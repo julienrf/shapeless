@@ -112,7 +112,7 @@ package object shapeless {
 }
 
 package shapeless {
-  @macrocompat.bundle
+
   class CachedImplicitMacros(val c: whitebox.Context) {
     import c.universe._
 
